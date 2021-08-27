@@ -13,6 +13,7 @@ from mydb.dataset4FuzCav import ProMolDataset4FuzCav
 # from mydb.dataset4FuzCav_adj import ProMolDataset4FuzCav
 from layers.model4FuzCav import Generator, Discriminator
 import utility.global_var as g
+from utility.mol_emb import mol_emb
 
 
 parser = argparse.ArgumentParser()
@@ -168,7 +169,7 @@ for epoch in range(opt.n_epochs):
         fake = Variable(FloatTensor(batch_size, 1).fill_(0.0), requires_grad=False)
 
         x_real = Variable(mols.type(FloatTensor))
-        x_real_emb = generator.encoder(mols, adj_mat)
+        x_real_emb = mol_emb(opt, mols, adj_mat)
 
         # -----------------
         #  Train Generator
@@ -186,14 +187,14 @@ for epoch in range(opt.n_epochs):
         g_loss1 = batch_gen_node_ce_loss.mean()
 
         gen_adj = generator.decoder(x_gen) #+++
-        batch_gen_adj_ce_loss = Variable(FloatTensor(batch_size, opt.reduced_row_size, 1).fill_(0.0)) #, requires_grad=True
+        batch_gen_adj_ce_loss = Variable(FloatTensor(batch_size, opt.reduced_row_size, 1).fill_(0.0))
         for j in range(batch_size):
             for k in range(opt.reduced_row_size):
                 batch_gen_adj_ce_loss[j, k, 0] = ce_loss(gen_adj[j, k], adj_ohe[j, k]) #+++
 
         g_loss2 = batch_gen_adj_ce_loss.mean()
 
-        g_loss = g_loss1 + g_loss2
+        g_loss = (g_loss1 + g_loss2) / 2
 
         g_loss.backward()
 
@@ -211,7 +212,6 @@ for epoch in range(opt.n_epochs):
         # ---------------------
         #  Train Discriminator
         # ---------------------
-        optimizer_G.zero_grad()
         optimizer_D.zero_grad()
 
         # Loss for real
@@ -225,14 +225,14 @@ for epoch in range(opt.n_epochs):
         # Total discriminator loss
         d_loss = (d_real_loss + d_fake_loss) / 2
 
-        generator.requires_grad = False # When training D, fix the weight of G
+        # generator.requires_grad = False # When training D, fix the weight of G
 
         d_loss.backward()
         optimizer_D.step()
         optimizer_G.step()
         if hasattr(torch.cuda, 'empty_cache'):
             torch.cuda.empty_cache()
-        generator.requires_grad = True
+        # generator.requires_grad = True
 
 
         print(

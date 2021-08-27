@@ -173,10 +173,10 @@ class Generator(nn.Module):
     #     mol = self.model0(gen_input)
     #     return mol
 
-    def encoder(self, xx, adj):
+    def encoder(self, xx, adj): # molecular embedding
         z = self.gat4cgan.encoder(xx, adj)
         return z
 
-    def decoder(self, z):
+    def decoder(self, z): # decode to get adj matix
         adj = self.gat4cgan.decoder(z)
         return adj
